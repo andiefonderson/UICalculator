@@ -22,6 +22,7 @@ namespace UICalculator
     public partial class MainWindow : Window
     {
         private bool newNumberInput = false;
+        private bool finalCalculation = false;
 
         public MainWindow()
         {
@@ -29,7 +30,7 @@ namespace UICalculator
         }
         private void InputOperator(string op)
         {
-            if (PreviousEntryWasNumber())
+            if (EntryIsANumber())
             {
                 AddNumberToCalc();
             }
@@ -39,20 +40,24 @@ namespace UICalculator
 
         private void InputNumber(float num)
         {
-            if (!PreviousEntryWasNumber())
+            if (!EntryIsANumber())
             {
                 AddOperatorToCalc();
             }
 
-            if (!newNumberInput)
+            if (inputDisplay.Content.ToString().Length < 10)
             {
-                inputDisplay.Content = num.ToString();
-                newNumberInput = true;
+                if (!newNumberInput)
+                {
+                    inputDisplay.Content = num.ToString();
+                    newNumberInput = true;
+                    finalCalculation = false;
+                }
+                else
+                {
+                    inputDisplay.Content += num.ToString();
+                }
             }
-            else
-            {
-                inputDisplay.Content += num.ToString();
-            }            
         }
 
         private void plusButton_Click(object sender, RoutedEventArgs e)
@@ -64,7 +69,6 @@ namespace UICalculator
         {
             InputOperator("-");
         }
-
 
         private void multiplyButton_Click(object sender, RoutedEventArgs e)
         {
@@ -128,38 +132,134 @@ namespace UICalculator
         private float AddNumberToCalc()
         {
             float addition = float.Parse(inputDisplay.Content.ToString());
-            CalculationsText.Content += inputDisplay.Content.ToString();
+            inputHistory.Content += inputDisplay.Content.ToString();
             return float.Parse(inputDisplay.Content.ToString());            
         }
 
         private void AddOperatorToCalc()
         {
-            CalculationsText.Content += inputDisplay.Content.ToString();
+            inputHistory.Content += inputDisplay.Content.ToString();
         }
 
-        private bool PreviousEntryWasNumber()
+        private bool EntryIsANumber()
         {
             float num;
             return float.TryParse(inputDisplay.Content.ToString(), out num);
         }
 
-        private float Calculate()
+        private string Calculate()
         {
-            if (PreviousEntryWasNumber())
+            if (EntryIsANumber())
             {
                 AddNumberToCalc();
             }            
-            string calculateValue = CalculationsText.Content.ToString();
-            string calculatedNumber = new DataTable().Compute(calculateValue, null).ToString();
+            string calculateValue = inputHistory.Content.ToString();
+            string calculatedNumber;
+            try
+            {
+                calculatedNumber = new DataTable().Compute(calculateValue, null).ToString();
+            }
+            catch (Exception) { return "ERROR"; }
+            
             newNumberInput = false;
-            CalculationsText.Content = "";
+            inputHistory.Content = "";
+            finalCalculation = true;
 
-            return float.Parse(calculatedNumber);
+            return ErrorCheck(calculatedNumber);
         }
 
         private void enterButton_Click(object sender, RoutedEventArgs e)
         {
             inputDisplay.Content = Calculate();
+        }
+
+        private void backSpaceButton_Click(object sender, RoutedEventArgs e)
+        {
+            string inputString = inputDisplay.Content.ToString();
+
+            if (EntryIsANumber() && !finalCalculation)
+            {
+                if (inputDisplay.Content.ToString() != "0")
+                {
+                    if(inputString.Length != 1)
+                    {
+                        inputDisplay.Content = inputString.Remove(inputString.Length - 1);
+                    }
+                    else
+                    {
+                        ClearDisplay();
+                    }
+                    
+                }
+            }
+            
+        }
+
+        private void clearEntryButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (EntryIsANumber())
+            {
+                ClearDisplay();
+            }
+        }
+
+        private void clearAllButton_Click(object sender, RoutedEventArgs e)
+        {
+            inputDisplay.Content = "0";
+            inputHistory.Content = "";
+            newNumberInput = false;
+        }
+
+        private void ClearDisplay()
+        {
+            inputDisplay.Content = "0";
+            newNumberInput = false;
+        }
+        
+        private string ErrorCheck(string numString)
+        {
+            if(numString == float.PositiveInfinity.ToString() || 
+                numString == float.NegativeInfinity.ToString() || 
+                float.Parse(numString) > 999999999)
+            {
+                return "ERROR";
+            }
+            else
+            {
+                return RoundNumber(numString);
+            }
+        }
+
+        private string RoundNumber(string numString)
+        {            
+            try
+            {
+                if (numString.Length > 10 && (float.Parse(numString) < 100000000))
+                {
+                    return numString.Substring(0, 10);
+                }
+                else
+                {
+                    return numString;
+                }
+            }
+            catch (Exception ex)
+            {
+                return "ERROR";
+                throw;
+            }
+        }
+
+        private void dotButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!inputDisplay.Content.ToString().Contains("."))
+            {
+                inputDisplay.Content += ".";
+                if (!newNumberInput)
+                {
+                    newNumberInput = true;
+                }
+            }
         }
     }
 }
